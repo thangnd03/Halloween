@@ -80,13 +80,16 @@
 
     .btn {
       border: none;
-      padding: 11px 26px;
+      padding: 13px 28px;
+      min-height: 48px;
       border-radius: 30px;
       font-family: inherit;
       font-size: 1.05rem;
       font-weight: 700;
       cursor: pointer;
       transition: transform .15s, box-shadow .15s;
+      touch-action: manipulation;
+      -webkit-tap-highlight-color: transparent;
     }
     .btn:active { transform: scale(.96) !important; }
 
@@ -101,7 +104,9 @@
       background: #f0e6ff;
       color: #a87cc4;
       box-shadow: 0 4px 12px #e0c8ff40;
-      position: fixed; /* will be repositioned by JS */
+      position: fixed;
+      transition: none;
+      z-index: 20;
     }
     .btn-no:hover { background: #e8d5ff; }
 
@@ -115,13 +120,35 @@
       background: #fff0f6;
       z-index: 8;
       text-align: center;
-      padding: 20px;
+      padding: 24px 16px;
     }
     #celebrate.show { display: flex; }
-    #celebrate h2 { font-size: 2rem; color: #ff6f91; margin-bottom: 10px; }
-    #celebrate p  { color: #c78fa0; font-size: 1.1rem; margin-bottom: 20px; }
-    .confetti-row { font-size: 3rem; letter-spacing: 8px; animation: bounce-row 1s ease-in-out infinite; }
+    #celebrate h2 { font-size: clamp(1.4rem, 5vw, 2rem); color: #ff6f91; margin-bottom: 10px; }
+    #celebrate p  { color: #c78fa0; font-size: clamp(0.9rem, 3vw, 1.1rem); margin-bottom: 20px; }
+    .confetti-row {
+      font-size: clamp(1.6rem, 6vw, 3rem);
+      letter-spacing: clamp(2px, 2vw, 8px);
+      animation: bounce-row 1s ease-in-out infinite;
+      word-break: break-all;
+    }
     @keyframes bounce-row { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-10px)} }
+
+    /* ── MOBILE ── */
+    @media (max-width: 480px) {
+      .overlay-body {
+        padding: 24px 18px 22px;
+        border-radius: 16px;
+        width: 92%;
+      }
+      .overlay-emoji { font-size: 3rem; margin-bottom: 10px; }
+      .overlay-title { font-size: 1.1rem; }
+      .overlay-sub   { font-size: 0.82rem; margin-bottom: 20px; }
+      .btn-row       { gap: 10px; }
+      .btn           { font-size: 0.95rem; padding: 12px 22px; }
+      #scare-text    { font-size: clamp(1.4rem, 8vw, 2.4rem); letter-spacing: 3px; margin-top: 16px; }
+      #scare-sub     { font-size: 0.82rem; letter-spacing: 1px; margin-top: 8px; }
+      #scare-close   { margin-top: 24px; padding: 12px 24px; font-size: 0.9rem; }
+    }
 
     /* ── JUMP SCARE ── */
     #scare {
@@ -229,11 +256,16 @@
   /* ── BACKGROUND ICONS ── */
   const ICONS = ['🎃','👻','🦇','🕷️','🕸','💀','🌙','⚰️','🍬','🔮','🧙'];
   const bg = document.getElementById('bg');
-  for (let i = 0; i < 28; i++) {
+  const isMobile = window.innerWidth <= 480;
+  const iconCount = isMobile ? 14 : 28;
+  for (let i = 0; i < iconCount; i++) {
     const el = document.createElement('div');
     el.className = 'icon';
     el.textContent = ICONS[i % ICONS.length];
-    el.style.cssText = `left:${Math.random()*96}%;top:${Math.random()*96}%;--d:${(Math.random()*4+2).toFixed(1)}s;animation-delay:${(Math.random()*4).toFixed(1)}s;font-size:${(Math.random()*1.8+1.4).toFixed(1)}rem`;
+    const sz = isMobile
+      ? (Math.random() * 1.0 + 1.0).toFixed(1)
+      : (Math.random() * 1.8 + 1.4).toFixed(1);
+    el.style.cssText = `left:${Math.random()*96}%;top:${Math.random()*96}%;--d:${(Math.random()*4+2).toFixed(1)}s;animation-delay:${(Math.random()*4).toFixed(1)}s;font-size:${sz}rem`;
     bg.appendChild(el);
   }
 
@@ -243,35 +275,52 @@
   let noEscapes = 0;
 
   function placeNoBtn() {
-    // Start inside the card area so it's visible, then let it flee
-    const margin = 80;
-    const x = margin + Math.random() * (window.innerWidth  - margin * 2);
-    const y = margin + Math.random() * (window.innerHeight - margin * 2);
+    const btnW = btnNo.offsetWidth  || 110;
+    const btnH = btnNo.offsetHeight || 48;
+    const margin = isMobile ? 12 : 24;
+    const x = margin + Math.random() * Math.max(0, window.innerWidth  - btnW - margin * 2);
+    const y = margin + Math.random() * Math.max(0, window.innerHeight - btnH - margin * 2);
     btnNo.style.left = x + 'px';
     btnNo.style.top  = y + 'px';
-    btnNo.style.transform = '';
+    btnNo.style.transform = 'none';
   }
 
-  // Position "No" near the card initially
-  btnNo.style.left = '50%';
-  btnNo.style.top  = '60%';
-  btnNo.style.transform = 'translateX(-50%)';
+  function updateNoLabel() {
+    if (noEscapes === 3)  btnNo.textContent = '🕸 Nope';
+    if (noEscapes === 6)  btnNo.textContent = '😤 Still no';
+    if (noEscapes === 10) btnNo.textContent = '💀 FINE...';
+  }
 
+  // Initial position: just below the modal card center
+  function initNoBtn() {
+    const btnW = btnNo.offsetWidth  || 110;
+    btnNo.style.left = ((window.innerWidth - btnW) / 2) + 'px';
+    btnNo.style.top  = (window.innerHeight * 0.62) + 'px';
+    btnNo.style.transform = 'none';
+  }
+  initNoBtn();
+  window.addEventListener('resize', () => { if (noEscapes === 0) initNoBtn(); });
+
+  // Desktop: flee on hover
   btnNo.addEventListener('mouseover', () => {
     noEscapes++;
     placeNoBtn();
-    if (noEscapes === 3) {
-      btnNo.textContent = '🕸 Nope';
-    } else if (noEscapes === 6) {
-      btnNo.textContent = '😤 Still no';
-    } else if (noEscapes === 10) {
-      btnNo.textContent = '💀 FINE...';
-      // After 10 escapes let them "catch" it — clicking triggers scare
-    }
+    updateNoLabel();
   });
 
+  // Mobile: flee on touchstart before tap registers
+  btnNo.addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    noEscapes++;
+    updateNoLabel();
+    if (noEscapes > 10) {
+      triggerScare();
+    } else {
+      placeNoBtn();
+    }
+  }, { passive: false });
+
   btnNo.addEventListener('click', () => {
-    // Clicking "No" triggers scare — you can't escape Halloween!
     triggerScare();
   });
 
